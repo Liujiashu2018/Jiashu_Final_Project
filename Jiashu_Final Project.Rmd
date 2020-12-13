@@ -1,0 +1,164 @@
+---
+title: "Final Project"
+author: "Jiashu Liu"
+date: "12/11/2020"
+output: html_document
+---
+
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
+```
+
+```{r}
+library(tidyverse)     # for data cleaning and plotting
+library(googlesheets4) # for reading googlesheet data
+library(lubridate)     # for date manipulation
+library(openintro)     # for the abbr2state() function
+library(maps)          # for map data
+library(ggmap)         # for mapping points on maps
+library(gplots)        # for col2hex() function
+library(RColorBrewer)  # for color palettes
+library(sf)            # for working with spatial data
+library(leaflet)       # for highly customizable mapping
+library(ggthemes)      # for more themes (including theme_map())
+library(plotly)        # for the ggplotly() - basic interactivity
+library(gganimate)     # for adding animation layers to ggplots
+library(gifski)        # for creating the gif (don't need to load this library every time,but need it installed)
+library(transformr)    # for "tweening" (gganimate)
+library(shiny)         # for creating interactive apps
+library(patchwork)     # for nicely combining ggplot2 graphs  
+library(gt)            # for creating nice tables
+library(rvest)         # for scraping data
+library(robotstxt)     # for checking if you can scrape data
+library(paletteer)
+library(readxl)
+AB_NYC_2019 <- read_excel("Desktop/Data Science/AB_NYC_2019.xlsx", 
+    col_types = c("text", "numeric", "text", 
+        "text", "text", "numeric", "numeric", 
+        "text", "numeric", "numeric", "numeric", 
+        "text", "numeric", "numeric", "numeric"))
+gs4_deauth()           # To not have to authorize each time you knit.
+theme_set(theme_minimal())
+```
+
+```{r}
+AB_NYC_2019%>%
+  group_by(neighbourhood_group)%>%
+  summarise(host_id = n())%>%
+  mutate(Number_of_Airbnb = host_id)%>%
+  ggplot()+
+  geom_col(aes(x=neighbourhood_group, y=Number_of_Airbnb,fill = neighbourhood_group))+
+  labs(x = "Neighbourhoods", 
+       y = "Number of Airbnb", 
+       title = "The Number of Airbnb in Each Neighbourhood")+
+  theme_classic()
+  
+```
+```{r}
+AB_NYC_2019%>%
+  group_by(neighbourhood_group, price)%>%
+  summarise(host_id = n())%>%
+  mutate(Number_of_houses = host_id)%>%
+  ggplot()+
+  geom_jitter(mapping = aes(x =price, y= Number_of_houses, 
+              color = neighbourhood_group), alpha = 0.6)+
+  facet_wrap(vars(neighbourhood_group))
+```
+
+```{r}
+NG_price_average<-
+  AB_NYC_2019%>%
+  group_by(neighbourhood_group)%>%
+  summarise(host_id = n(),
+            mean = mean(price))%>%
+  mutate(Number_of_houses = host_id)%>%
+  #summarise(mean = mean(price))%>%
+  mutate(Average_price = mean)
+
+AB_NYC_2019<-
+  AB_NYC_2019%>%
+  group_by(neighbourhood_group, price)%>%
+  summarise(host_id = n())%>%
+  mutate(Number_of_houses = host_id)
+
+ggplot()+
+  geom_jitter(AB_NYC_2019, mapping=aes(x=price, y=Number_of_houses, 
+              color = neighbourhood_group), alpha = 0.6)+
+  geom_jitter(NG_price_average, mapping=aes(x=Average_price, y=Number_of_houses, 
+              fill = "black"))+
+  facet_wrap(vars(neighbourhood_group))
+```
+
+```{r}
+AB_NYC_2019%>%
+  group_by(room_type)%>%
+  summarise(host_id = n())%>%
+  mutate(Number_of_Airbnb = host_id)%>%
+  ggplot()+
+  geom_col(aes(x=room_type, y=Number_of_Airbnb,fill = room_type))+
+  labs(x = "Room Type", 
+       y = "Number of Airbnb", 
+       title = "The Number of Airbnb in Room Type")
+```
+```{r}
+AB_NYC_2019%>%
+  group_by(room_type, price)%>%
+  summarise(host_id = n())%>%
+  mutate(Number_of_Airbnb = host_id)%>%
+  ggplot()+
+  geom_jitter(aes(x=price, y=Number_of_Airbnb, color = room_type), alpha = 0.6)+
+  facet_wrap(vars(room_type))+
+  labs(x = "Price",
+       y = "Number of Airbnb", 
+       title = "Price distribution of each room type")
+```
+```{r}
+AB_NYC_2019%>%
+  #summarise(mean = mean(minimum_nights))%>%
+  ggplot()+
+  geom_jitter(aes(y=room_type, x=minimum_nights, color = room_type))+
+  facet_wrap(vars(room_type))
+ # labs(x = "Price",
+       #y = "Number of Airbnb", 
+       #title = "Price distribution of each room type")
+```
+```{r}
+AB_NYC_2019%>%
+  group_by(neighbourhood_group)%>%
+  ggplot()+
+  geom_boxplot(aes(x = neighbourhood_group, y = availability_365, color = neighbourhood_group))
+```
+
+```{r}
+NYC_map <- get_stamenmap(
+    bbox = c(left = -74.7276, bottom = 40.2973, right = -73.2307, top = 41.0949), 
+    maptype = "terrain",
+    zoom = 9)
+
+g1<-ggmap(NYC_map)+
+  geom_point(data = AB_NYC_2019, 
+             aes(x = longitude, y = latitude, color= neighbourhood_group)) +
+  theme_map()
+```
+
+
+
+```{r}
+NYC_map <- get_stamenmap(
+    bbox = c(left = -74.7276, bottom = 40.2973, right = -73.2307, top = 41.0949), 
+    maptype = "terrain",
+    zoom = 9)
+
+g2<-ggmap(NYC_map)+
+  geom_point(data = AB_NYC_2019, 
+             aes(x = longitude, y = latitude, color= availability_365)) +
+  theme_map()
+```
+```{r}
+g1|g2
+```
+
+
+
